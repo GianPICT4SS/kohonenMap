@@ -1,8 +1,8 @@
 import numpy as np
+import pandas as pd
+
 import matplotlib.pyplot as plt
-
 from sklearn import datasets
-
 from minisom import MiniSom
 
 # import iris dataset
@@ -12,6 +12,7 @@ data = iris.data
 som = MiniSom(7, 7, 4, sigma=3, learning_rate=0.5,
               neighborhood_function='triangle', random_seed=10)
 som.pca_weights_init(data)
+"""
 max_iter = 10000
 q_error = []
 t_error = []
@@ -30,4 +31,4 @@ plt.plot(iter_x, q_error)
 plt.ylabel('quantization error')
 plt.xlabel('iteration index')
 
-
+"""
