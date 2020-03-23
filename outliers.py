@@ -17,9 +17,9 @@ labels = df['Y']
 X = df.drop(columns='Y')
 X = np.apply_along_axis(lambda x: x/np.linalg.norm(x), 1, X)
 grid_dim = int(X.shape[1]*0.5)
-som = MiniSom(grid_dim, grid_dim, X.shape[1], sigma=grid_dim/2, learning_rate=0.1,
+som = MiniSom(grid_dim, grid_dim, X.shape[1], sigma=int(grid_dim/2), learning_rate=0.1,
               neighborhood_function='gaussian',
-              random_seed=10)
+              random_seed=123)
 
 X_train, X_test, y_train, y_test = train_test_split(X, labels, random_state=123)
 
@@ -29,7 +29,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, labels, random_state=123)
 # ======================
 som.pca_weights_init(X_train)
 print("Training...")
-som.train_batch(X_train, grid_dim**2*800, verbose=True)  # random training
+som.train_batch(X_train, grid_dim**2*500, verbose=True)  # random training
 print("\n...done!")
 #som.train_random(X, 7*7*600, verbose=True)
 
@@ -47,7 +47,7 @@ for x, y in zip(X_train, y_train):
              markeredgecolor=colors[i], markersize=12, markeredgewidth=2)
 plt.axis([0, grid_dim, 0, grid_dim])
 plt.colorbar()
-plt.savefig('som_labels_train.png')
+plt.savefig('PLOTS/som_labels_train_aust.png')
 plt.show()
 plt.close()
 
@@ -78,7 +78,9 @@ plt.close()
 
 
 
-#  Quantization Error
+
+# The quantization error: average distance between each data vector and its BMU.
+# The topographic error: the proportion of all data vectors for which first and second BMUs are not adjacent units.
 max_iter = 10**4
 q_error = []
 t_error = []
@@ -93,15 +95,19 @@ for i in range(max_iter):
         iter_x.append(i)
         #sys.stdout.write(f'\riteration={i:2d} status={percent:0.2f}%')
 
-plt.plot(iter_x, q_error, label='quantization error')
-plt.plot(iter_x, t_error, label='topological error')
-
-plt.ylabel('error')
+plt.plot(iter_x, q_error)
+plt.ylabel('Quantization error')
 plt.xlabel('iteration index')
 plt.grid(linestyle='--', linewidth=.4, which="both")
+plt.savefig('PLOTS/quant_error_aust.png')
+plt.show()
+plt.close()
 
-plt.legend()
-plt.savefig('quant_top_error.png')
+plt.plot(iter_x, t_error)
+plt.ylabel('Topological error')
+plt.xlabel('iteration index')
+plt.grid(linestyle='--', linewidth=.4, which="both")
+plt.savefig('PLOTS/top_error_aust.png')
 plt.show()
 plt.close()
 
@@ -150,7 +156,7 @@ for x in X_test:
              markeredgecolor=colors[i], markersize=12, markeredgewidth=2)
 plt.axis([0, grid_dim, 0, grid_dim])
 plt.colorbar()
-plt.savefig('som_labels_test_hat.png')
+plt.savefig('PLOTS/som_labels_test_aust.png')
 plt.show()
 plt.close()
 
@@ -166,3 +172,39 @@ tot_err_test = round(np.sum(tot_err_test)/len(y_hat), 2)
 print(f"Grid dimension (gaussian) = {(grid_dim, grid_dim)}")
 print(f"Classification Train Error: {round(tot_err_train*100, 2)} %")
 print(f"Classification Test Error: {round(tot_err_test*100, 2)} %")
+
+# ===========================
+# UNSUPERVISED WAY
+# ===========================
+
+som.pca_weights_init(X)
+print("Training...")
+#som.train_batch(X, grid_dim**2*800, verbose=True)  # random training
+print("\n...done!")
+som.train_random(X, grid_dim**2*1000, verbose=True)
+
+
+# use different colors and markers for each label
+plt.figure(figsize=(grid_dim, grid_dim))
+plt.pcolor(som.distance_map().T, cmap='bone_r')  # plotting the distance map as background
+markers = ['*', 'D']
+colors = ['C0', 'C1']
+for x, y in zip(X, labels):
+    w = som.winner(x)  # getting the winner coordinates
+    # place a marker on the winning position for the sample xx
+    i = 0 if y == 1 else 1
+    plt.plot(w[0]+.5, w[1]+.5, markers[i], markerfacecolor='None',
+             markeredgecolor=colors[i], markersize=12, markeredgewidth=2)
+plt.axis([0, grid_dim, 0, grid_dim])
+plt.colorbar()
+plt.savefig('PLOTS/som_labels_aust.png')
+plt.show()
+plt.close()
+
+class_assignments = som.labels_map(X, labels)
+y = classify(som, X, class_assignments)
+
+tot_err = [0 if labels[i] == y[i] else 1 for i in range(len(y))]
+tot_err = round(np.sum(tot_err)/len(y), 2)
+
+print(f"Classification total Error: {round(tot_err*100, 2)} %")
